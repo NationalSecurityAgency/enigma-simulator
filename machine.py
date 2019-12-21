@@ -20,7 +20,8 @@ class Enigma():
 
     Thought about geometrically, the Enigma can be viewed as follows:
 
-    Keyboard -> Plugboard -> L Rotor -> M Rotor -> R Rotor -> Reflector.
+    Keyboard -> Plugboard -> R Rotor -> M Rotor -> L Rotor -> Reflector.
+    Lampboard <- Plugboard <- R Rotor <- M Rotor <- L Rotor <- Reflector.
 
     The generic initial rotor ordering (which can be changed by the user) is L = I, M = II, R = III (I,II,III are the three Wehrmacht Enigma rotors defined in components.py)
     '''
@@ -41,15 +42,10 @@ class Enigma():
         # Set the key and rotor order.
         self.key = key
         self.rotor_order = rotor_order
-        # Now define the components.
-        self.r_rotor = Rotor(rotor_order[2], key[2])
-        self.m_rotor = Rotor(rotor_order[1], key[1], self.r_rotor)
-        self.l_rotor = Rotor(rotor_order[0], key[0], self.m_rotor)
+        self.set_rotor_order(rotor_order)
+
         self.reflector = Reflector()
         self.plugboard = Plugboard(swaps)
-        # Define prev_rotor information for middle and right rotors.
-        self.m_rotor.prev_rotor = self.l_rotor
-        self.r_rotor.prev_rotor = self.m_rotor
 
     def __repr__(self):
         print('Keyboard <-> Plugboard <->  Rotor ' + self.rotor_order[0]
@@ -87,14 +83,14 @@ class Enigma():
         if letter in self.plugboard.swaps:
             letter = self.plugboard.swaps[letter.upper()]
         # Next, step the rotors.
-        self.l_rotor.step()
+        self.r_rotor.step()
         # Send the letter through the rotors to the reflector.
         # Get the index of the letter that emerges from the rotor.
-        left_pass = self.l_rotor.encode_letter(ALPHABET.index(letter.upper()))
-        # Must match letter INDEX, not letter name to reflector as before. 
+        left_pass = self.r_rotor.encode_letter(ALPHABET.index(letter.upper()))
+        # Must match letter INDEX, not letter name to reflector as before.
         refl_output = self.reflector.wiring[ALPHABET[(left_pass)%26]]
         # Send the reflected letter back through the rotors.
-        final_letter = ALPHABET[self.r_rotor.encode_letter(
+        final_letter = ALPHABET[self.l_rotor.encode_letter(
             ALPHABET.index(refl_output), forward=False)]
         if final_letter in self.plugboard.swaps:
             return self.plugboard.swaps[final_letter]
@@ -116,26 +112,26 @@ class Enigma():
         else:
             print('Please provide a three letter position key such as AAA.')
 
-    def set_rotor_order(self, order):
+    def set_rotor_order(self, rotor_order):
         '''
         Changes the order of rotors in the Engima machine to match that specified by the user.
-        The syntax for the rotor order is a list of the form ['I', 'II', 'III'], where 'I' is the left rotor, 'II' is the middle rotor, and 'III' is the right rotor. 
+        The syntax for the rotor order is a list of the form ['I', 'II', 'III'], where 'I' is the left rotor, 'II' is the middle rotor, and 'III' is the right rotor.
         '''
         # Now define the components.
-        self.r_rotor = Rotor(order[2], self.key[2])
-        self.m_rotor = Rotor(order[1], self.key[1], self.r_rotor)
-        self.l_rotor = Rotor(order[0], self.key[0], self.m_rotor)
-        # Define prev_rotor information for middle and right rotors.
-        self.m_rotor.prev_rotor = self.l_rotor
-        self.r_rotor.prev_rotor = self.m_rotor
+        self.l_rotor = Rotor(rotor_order[0], self.key[0])
+        self.m_rotor = Rotor(rotor_order[1], self.key[1], self.l_rotor)
+        self.r_rotor = Rotor(rotor_order[2], self.key[2], self.m_rotor)
+        # Define prev_rotor information for middle and left rotors.
+        self.m_rotor.prev_rotor = self.r_rotor
+        self.l_rotor.prev_rotor = self.m_rotor
 
     def set_plugs(self, swaps, replace=False):
         '''
         Update the plugboard settings. Swaps takes the form ['AB', 'CD'].
 
-        If replace is true, then this method will erase the current plugboard settings and replace them with new ones. 
+        If replace is true, then this method will erase the current plugboard settings and replace them with new ones.
         '''
         self.plugboard.update_swaps(swaps, replace)
        # print('Plugboard successfully updated. New swaps are:')
        # for s in self.plugboard.swaps:
-       #     print(s)       
+       #     print(s)
