@@ -65,6 +65,9 @@ class Rotor:
         """
         if self.next_rotor and self.window==self.notch:
             self.next_rotor.step()
+        # Doublestep midrotor if required
+        elif self.next_rotor and not self.prev_rotor and self.next_rotor.window == self.next_rotor.notch:
+            self.next_rotor.step()
         self.offset = (self.offset + 1)%26
         self.window = ALPHABET[self.offset]
        # print(self.offset, self.window)
