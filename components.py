@@ -9,7 +9,7 @@ Details: This file holds the components of the Engima machine. The machine.py fi
 '''
 
 # Define global variables to hold rotor wiring and stepping information.
-# Wiring information is derived from users.telnet.be/d.rijmenants/en/engimatech.htm#wiringtables.
+# Wiring information is derived from users.telenet.be/d.rijmenants/en/enigmatech.htm#wiringtables.
 
 ROTOR_WIRINGS = {
     'I': {'forward':'EKMFLGDQVZNTOWYHXUSPAIBRCJ',
