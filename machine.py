@@ -20,7 +20,10 @@ class Enigma():
 
     Thought about geometrically, the Enigma can be viewed as follows:
 
-    Keyboard -> Plugboard -> L Rotor -> M Rotor -> R Rotor -> Reflector.
+    Keyboard -> Plugboard -> R Rotor -> M Rotor -> L Rotor -> Reflector.
+    Lampboard <- Plugboard <- R Rotor <- M Rotor <- L Rotor <- Reflector.
+
+    The right (fast) rotor steps on every key press. The middle rotor steps when the right rotor passes its notch, and again on the next key press if it has itself reached its notch (the double step), carrying the left rotor with it.
 
     The generic initial rotor ordering (which can be changed by the user) is L = I, M = II, R = III (I,II,III are the three Wehrmacht Enigma rotors defined in components.py)
     '''
@@ -42,14 +45,9 @@ class Enigma():
         self.key = key
         self.rotor_order = rotor_order
         # Now define the components.
-        self.r_rotor = Rotor(rotor_order[2], key[2])
-        self.m_rotor = Rotor(rotor_order[1], key[1], self.r_rotor)
-        self.l_rotor = Rotor(rotor_order[0], key[0], self.m_rotor)
+        self.set_rotor_order(rotor_order)
         self.reflector = Reflector()
         self.plugboard = Plugboard(swaps)
-        # Define prev_rotor information for middle and right rotors.
-        self.m_rotor.prev_rotor = self.l_rotor
-        self.r_rotor.prev_rotor = self.m_rotor
 
     def __repr__(self):
         print('Keyboard <-> Plugboard <->  Rotor ' + self.rotor_order[0]
@@ -87,19 +85,32 @@ class Enigma():
         if letter in self.plugboard.swaps:
             letter = self.plugboard.swaps[letter.upper()]
         # Next, step the rotors.
-        self.l_rotor.step()
-        # Send the letter through the rotors to the reflector.
+        self.step_rotors()
+        # Send the letter through the rotors to the reflector, entering at the right rotor.
         # Get the index of the letter that emerges from the rotor.
-        left_pass = self.l_rotor.encode_letter(ALPHABET.index(letter.upper()))
+        left_pass = self.r_rotor.encode_letter(ALPHABET.index(letter.upper()))
         # Must match letter INDEX, not letter name to reflector as before. 
         refl_output = self.reflector.wiring[ALPHABET[(left_pass)%26]]
         # Send the reflected letter back through the rotors.
-        final_letter = ALPHABET[self.r_rotor.encode_letter(
+        final_letter = ALPHABET[self.l_rotor.encode_letter(
             ALPHABET.index(refl_output), forward=False)]
         if final_letter in self.plugboard.swaps:
             return self.plugboard.swaps[final_letter]
         else:
             return final_letter
+
+    def step_rotors(self):
+        '''
+        Steps the rotors once, as happens on every key press before the letter is enciphered.
+
+        The right rotor always steps, and Rotor.step() carries into the next rotor when a rotor
+        leaves its notch position. In addition, a middle rotor that is already at its notch is
+        stepped again by its own pawl (taking the left rotor with it): the double step.
+        Example with rotors I, II, III: ADU -> ADV -> AEW -> BFX.
+        '''
+        if self.m_rotor.window == self.m_rotor.notch and self.r_rotor.window != self.r_rotor.notch:
+            self.m_rotor.step()
+        self.r_rotor.step()
 
     def set_rotor_position(self, position_key, printIt=False):
         '''
@@ -121,13 +132,14 @@ class Enigma():
         Changes the order of rotors in the Engima machine to match that specified by the user.
         The syntax for the rotor order is a list of the form ['I', 'II', 'III'], where 'I' is the left rotor, 'II' is the middle rotor, and 'III' is the right rotor. 
         '''
-        # Now define the components.
-        self.r_rotor = Rotor(order[2], self.key[2])
-        self.m_rotor = Rotor(order[1], self.key[1], self.r_rotor)
-        self.l_rotor = Rotor(order[0], self.key[0], self.m_rotor)
-        # Define prev_rotor information for middle and right rotors.
-        self.m_rotor.prev_rotor = self.l_rotor
-        self.r_rotor.prev_rotor = self.m_rotor
+        # Now define the components. The signal enters at the right rotor, so each rotor's
+        # next_rotor is the one to its left, and stepping carries from right to left.
+        self.l_rotor = Rotor(order[0], self.key[0])
+        self.m_rotor = Rotor(order[1], self.key[1], self.l_rotor)
+        self.r_rotor = Rotor(order[2], self.key[2], self.m_rotor)
+        # Define prev_rotor information for middle and left rotors (used on the return path).
+        self.m_rotor.prev_rotor = self.r_rotor
+        self.l_rotor.prev_rotor = self.m_rotor
 
     def set_plugs(self, swaps, replace=False):
         '''
