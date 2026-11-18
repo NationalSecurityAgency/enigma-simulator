@@ -1,0 +1,4 @@
+tqdm==4.70.1
+notebook==7.6.5
+nbconvert==7.17.2
+ipykernel==7.3.0
